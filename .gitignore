@@ -1,3 +1,10 @@
-api_key.txt
-*.pickle
 /.idea/
+__pycache__/
+*.txt
+*.pickle
+*.aux
+*.log
+*.gz
+*.pdf
+*.tex
+*.db

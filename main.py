@@ -1,10 +1,25 @@
 from util import *
-
-api = RiotAPI.RiotAPI()
-
-print(api.make_request('/lol/summoner/v3/summoners/by-name/player'))
-#api.rw_test()
+from config import *
+import cProfile
 
 
+def main():
+    # Initialization
+    api = RiotAPI.RiotAPI()
 
-api.shutdown()
+    # Your code here
+    player_name = 'player'
+    le_stats = player_stats.compute_champion_winrates(api, player_name)
+    latex.build_champion_report(le_stats, player_name)
+
+    # Closing code
+    api.shutdown()
+
+#########
+# Debugging
+
+
+if DEBUG_MODE:
+    cProfile.run('main()', sort=1)
+else:
+    main()
