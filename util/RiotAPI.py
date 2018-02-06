@@ -184,7 +184,7 @@ class RiotAPI:
         match_data = self.get_match_by_id(match_id)
 
         # Initialize the return dictionary
-        match_champion_list = {'same_team': [], 'enemy_team': [], 'self': []}
+        match_champion_list = {'team': [], 'enemy': [], 'self': []}
 
         # Determine if the player's team won
         for team in match_data['teams']:
@@ -194,13 +194,13 @@ class RiotAPI:
         # Add champion ids to the dictionary one participant at a time
         for participant in match_data['participants']:
             if participant['teamId'] == own_team_id:
-                match_champion_list['same_team'].append(participant['championId'])
+                match_champion_list['team'].append(participant['championId'])
 
                 # Additionally add the champion id to self key if needed
                 if participant['participantId'] == self_id:
                     match_champion_list['self'].append(participant['championId'])
             else:
-                match_champion_list['enemy_team'].append(participant['championId'])
+                match_champion_list['enemy'].append(participant['championId'])
 
         return match_champion_list
 

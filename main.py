@@ -9,8 +9,8 @@ def main():
 
     # Your code here
     player_name = 'player'
-    le_stats = player_stats.compute_champion_winrates(api, player_name)
-    latex.build_champion_report(le_stats, player_name)
+    pstats = player_stats.compute_all_stats(api, player_name, season_list=[9, 10, 11])
+    latex.build_champion_report(pstats, player_name)
 
     # Closing code
     api.shutdown()
@@ -20,6 +20,6 @@ def main():
 
 
 if DEBUG_MODE:
-    cProfile.run('main()', sort=1)
+    cProfile.run('main()', sort=2)
 else:
     main()
