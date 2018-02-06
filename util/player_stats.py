@@ -17,7 +17,9 @@ def compute_all_stats(api, name, season_list=list(), queue_list=list()):
     # Get all matches given provided parameters
     match_list = []
     curr_index = 0
-    while len(match_list) % 100 == 0:
+    prev_len = - 100
+    while len(match_list) % 100 == 0 and len(match_list) != prev_len:
+        prev_len = len(match_list)
         match_list += api.get_matches_by_filter(name, begin_index=curr_index, season=season_list, queue=queue_list)
         curr_index += 100
 

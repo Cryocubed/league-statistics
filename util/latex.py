@@ -12,6 +12,8 @@ def build_latex_file(filename):
 
 def build_champion_report(statistics_dict, player_name):
 
+    player_name = player_name.replace(' ','')
+
     total_games = statistics_dict['total_wins'] + statistics_dict['total_losses']
     winrate = 100 * statistics_dict['total_wins'] / (total_games)
 
