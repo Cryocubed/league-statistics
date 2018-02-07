@@ -16,6 +16,7 @@ def build_champion_report(statistics_dict, player_name):
 
     total_games = statistics_dict['total_wins'] + statistics_dict['total_losses']
     winrate = 100 * statistics_dict['total_wins'] / (total_games)
+    total_days_in_game = statistics_dict['total_time'] / 60 / 60 / 24
 
     filter_str = ''
     for curr_filter, curr_data in statistics_dict['filters'].items():
@@ -33,6 +34,7 @@ def build_champion_report(statistics_dict, player_name):
                '\\large{' + filter_str + '}\n\n' \
                '\\large{Overall winrate: ' + str(round(winrate, 2)) + '\%}\n\n' \
                '\\large{\# of games: ' + str(total_games) + '}\n\n' \
+               '\\large{Total days spent: ' + str(round(total_days_in_game, 2)) + '}\n\n' \
                '\\Large{Champion winrates}\n' \
                '\\bigskip\n\n' \
                '\\normalsize\n' \
@@ -50,6 +52,16 @@ def build_champion_report(statistics_dict, player_name):
                 'Champion Name & Winrate & Number of Games \\\\ \\hline\n'
 
     for item in statistics_dict['winrate_enemy']:
+        file_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '\\\\\n'
+
+    file_str += '\\end{longtable}\n' \
+                '\\Large{Synergy Winrates}' \
+                '\\bigskip\n\n' \
+                '\\normalsize\n' \
+                '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n' \
+                'Champion Name & Winrate & Number of Games \\\\ \\hline\n'
+
+    for item in statistics_dict['winrate_team']:
         file_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '\\\\\n'
 
     file_str += '\\end{longtable}\n' \

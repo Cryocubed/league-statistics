@@ -183,6 +183,9 @@ class RiotAPI:
         # Initialize the return dictionary
         match_champion_list = {'team': [], 'enemy': [], 'self': []}
 
+        # Get game length
+        match_champion_list['length'] = match_data['gameDuration']
+
         # Determine if the player's team won
         for team in match_data['teams']:
             if team['teamId'] == own_team_id:

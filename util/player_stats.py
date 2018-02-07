@@ -1,4 +1,5 @@
 import collections
+import operator as op
 
 
 def compute_all_stats(api, name, season_list=list(), queue_list=list()):
@@ -12,7 +13,7 @@ def compute_all_stats(api, name, season_list=list(), queue_list=list()):
     """
 
     # Initialize variables
-    statistics = {'filters': {'Seasons': season_list, 'Queues': queue_list}}
+    statistics = {'filters': {'Seasons': season_list, 'Queues': queue_list}, 'total_time': 0}
 
     # Get all matches given provided parameters
     match_list = []
@@ -41,6 +42,8 @@ def compute_all_stats(api, name, season_list=list(), queue_list=list()):
     # Iterate over all matches to collect champ W/Ls
     for match in match_list:
         match_champion_list = api.get_match_champion_list(match, name)
+
+        statistics['total_time'] += match_champion_list['length']
 
         # Update stats for all teams
         for team in champion_stats.keys():
