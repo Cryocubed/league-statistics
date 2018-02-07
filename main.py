@@ -1,6 +1,7 @@
-from util import *
-from config import *
 import cProfile
+
+from config import *
+from util import *
 
 
 def main():

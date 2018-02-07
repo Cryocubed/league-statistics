@@ -1,4 +1,7 @@
-import dataset, json
+import json
+
+import dataset
+
 from config import *
 
 

@@ -1,5 +1,4 @@
 import os
-import time
 
 
 def build_latex_file(filename):
@@ -15,10 +14,10 @@ def build_champion_report(statistics_dict, player_name):
     # Config
     significance_color = [(0.01, 'electricblue'), (0.05, 'green'), (0.1, 'yellow'), (0.25, 'orange')]
 
-    player_name = player_name.replace(' ','')
+    player_name = player_name.replace(' ', '')
 
     total_games = statistics_dict['total_wins'] + statistics_dict['total_losses']
-    winrate = 100 * statistics_dict['total_wins'] / (total_games)
+    winrate = 100 * statistics_dict['total_wins'] / total_games
     total_days_in_game = statistics_dict['total_time'] / 60 / 60 / 24
 
     filter_str = ''
@@ -51,7 +50,7 @@ def build_champion_report(statistics_dict, player_name):
             if item[3] < sig:
                 file_str += '\\cellcolor{' + color + '}'
                 break
-        file_str += str(item[3])+ '\\\\\n'
+        file_str += str(item[3]) + '\\\\\n'
 
     file_str += '\\end{longtable}\n' \
                 '\\Large{vs winrates}' \
@@ -66,7 +65,7 @@ def build_champion_report(statistics_dict, player_name):
             if item[3] < sig:
                 file_str += '\\cellcolor{' + color + '}'
                 break
-        file_str += str(item[3])+ '\\\\\n'
+        file_str += str(item[3]) + '\\\\\n'
 
     file_str += '\\end{longtable}\n' \
                 '\\Large{Synergy Winrates}' \
@@ -81,7 +80,7 @@ def build_champion_report(statistics_dict, player_name):
             if item[3] < sig:
                 file_str += '\\cellcolor{' + color + '}'
                 break
-        file_str += str(item[3])+ '\\\\\n'
+        file_str += str(item[3]) + '\\\\\n'
 
     file_str += '\\end{longtable}\n' \
                 '\\end{center}' \

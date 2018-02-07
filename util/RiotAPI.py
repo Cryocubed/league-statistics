@@ -1,7 +1,9 @@
+import time
+
+import requests
+
 from config import *
 from util import DatabaseIO
-import requests
-import time
 
 
 class RiotAPI:
@@ -35,7 +37,7 @@ class RiotAPI:
         else:
             dict_entry = {}
             if DEBUG_MODE:
-                print('INTERNAL DATA SEARCH FOR ' + uri + ' WAS OVERRIDED')
+                print('INTERNAL DATA SEARCH FOR ' + uri + ' WAS OVERRIDDEN')
 
         # Return stored data if available
         if USE_STORED_DATA and dict_entry:
@@ -68,7 +70,7 @@ class RiotAPI:
                             attempt_counter += 1
                             self.keys_working = len(self.key_list)
                             time.sleep(120)
-                except (KeyError, TypeError) as e:
+                except (KeyError, TypeError):
                     self.keys_working = len(self.key_list)
                     break
 
@@ -78,7 +80,7 @@ class RiotAPI:
                 self.api_requests_made += 1
 
                 return response
-            return None # if no data (should never occur due to previous while loop)
+            return None  # if no data (should never occur due to previous while loop)
 
     ##############################
     # Static data requests
@@ -111,8 +113,8 @@ class RiotAPI:
 
     def get_champion_from_id(self, c_id):
         """
-        Looks up a champion name from stored static-data. There is a way to do this through the API, but this uses internal
-        data instead.
+        Looks up a champion name from stored static-data. There is a way to do this through the API, but this uses
+        internal data instead.
         :param c_id: Champion id
         :return: String of champion name, or None if not found
         """
@@ -144,13 +146,13 @@ class RiotAPI:
     ##############################
     # Match info requests
     ##############################
-    def get_match_by_id(self, id):
+    def get_match_by_id(self, match_id):
         """
         Returns match data given a match id
-        :param id: Match id
+        :param match_id: Match id
         :return: Match data
         """
-        return self.make_request('/lol/match/v3/matches/' + str(id))
+        return self.make_request('/lol/match/v3/matches/' + str(match_id))
 
     def get_current_match_info(self, name):
         """
@@ -178,10 +180,7 @@ class RiotAPI:
         match_data = self.get_match_by_id(match_id)
 
         # Initialize the return dictionary
-        match_champion_list = {'team': [], 'enemy': [], 'self': []}
-
-        # Get game length
-        match_champion_list['length'] = match_data['gameDuration']
+        match_champion_list = {'team': [], 'enemy': [], 'self': [], 'length': match_data['gameDuration']}
 
         # Determine if the player's team won
         for team in match_data['teams']:
