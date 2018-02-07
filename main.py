@@ -20,6 +20,6 @@ def main():
 
 
 if DEBUG_MODE:
-    cProfile.run('main()', sort=2)
+    cProfile.run('main()', sort=1)
 else:
     main()

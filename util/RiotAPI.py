@@ -9,12 +9,12 @@ class RiotAPI:
     # Initialize variables
     key_list = []
     api_requests_made = 0
-    api_key_index = 0  # Start by using first API key
+    api_key_index = 0
     keys_working = len(key_list)
 
     def __init__(self):
-        # Import API Keys
-        api_key_file = open('api_key.txt', 'r')
+        # Import API key
+        api_key_file = open(API_KEY_FILE, 'r')
         for line in api_key_file:
             self.key_list.append(str(line).rstrip('\n'))
 
@@ -55,26 +55,23 @@ class RiotAPI:
             while True:
                 try:
                     if attempt_counter >= 5:
-                        print('API HAS BEEN UNAVAILABLE FOR 10 MINUTES, SHUTDOWN.')
+                        print('API HAS BEEN UNAVAILABLE FOR 10 MINUTES.')
 
-                    # Make request to riot api. Rotate key if needed
+                    # Make request to riot api
                     r = requests.get(final_url + self.key_list[self.api_key_index % len(self.key_list)])
                     response = r.json()
                     if int(response['status']['status_code']) == 429:
-                        print("Rate limit reached, switching API key")
                         self.api_key_index += 1
                         self.keys_working -= 1
                         if self.keys_working == 0:
-                            print("All API keys used, sleeping 2 minutes.")
+                            print("Sleeping 2 minutes.")
                             attempt_counter += 1
                             self.keys_working = len(self.key_list)
                             time.sleep(120)
-                except KeyError:
-                    break
-                except TypeError:
+                except (KeyError, TypeError) as e:
+                    self.keys_working = len(self.key_list)
                     break
 
-            self.keys_working = len(self.key_list)
             # Save API request to database
             if response:
                 self.db.save_api_data(uri, response)

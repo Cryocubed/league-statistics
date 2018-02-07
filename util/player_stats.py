@@ -1,5 +1,6 @@
 import collections
-import operator as op
+import math
+from scipy import stats as scistats
 
 
 def compute_all_stats(api, name, season_list=list(), queue_list=list()):
@@ -18,7 +19,7 @@ def compute_all_stats(api, name, season_list=list(), queue_list=list()):
     # Get all matches given provided parameters
     match_list = []
     curr_index = 0
-    prev_len = - 100
+    prev_len = -1
     while len(match_list) % 100 == 0 and len(match_list) != prev_len:
         prev_len = len(match_list)
         match_list += api.get_matches_by_filter(name, begin_index=curr_index, season=season_list, queue=queue_list)
@@ -75,16 +76,25 @@ def compute_champ_winrates(api, champion_stats):
         try:
             wins = champion_stats[champion]['win']
             losses = champion_stats[champion]['loss']
+            total = wins + losses
 
-            stats[api.get_champion_from_id(champion)]['winrate'] = round(100 * wins / (wins + losses), 2)
-            stats[api.get_champion_from_id(champion)]['games'] = wins + losses
+            stats[api.get_champion_from_id(champion)]['winrate'] = round(100 * wins / total, 2)
+            stats[api.get_champion_from_id(champion)]['games'] = total
+
+            # Calculate significance
+            stdev = math.sqrt(total * math.pow(0.5, 2))
+            offset = abs(wins - total / 2)
+            if offset > 0:
+                offset -= 0.5
+            significance = round(2 * (1 - scistats.norm.cdf(offset / stdev)), 4)
+            stats[api.get_champion_from_id(champion)]['significance'] = significance
 
         except ZeroDivisionError:
             continue
 
     formatted_list = []
     for champion, data in stats.items():
-        formatted_list.append((champion, data['winrate'], data['games']))
+        formatted_list.append((champion, data['winrate'], data['games'], data['significance']))
 
-    formatted_list.sort(key=lambda tup: tup[1])
-    return formatted_list[::-1]
+    formatted_list.sort(key=lambda tup: tup[1], reverse=True)
+    return formatted_list

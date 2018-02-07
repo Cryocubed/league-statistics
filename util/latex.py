@@ -12,6 +12,9 @@ def build_latex_file(filename):
 
 def build_champion_report(statistics_dict, player_name):
 
+    # Config
+    significance_color = [(0.01, 'electricblue'), (0.05, 'green'), (0.1, 'yellow'), (0.25, 'orange')]
+
     player_name = player_name.replace(' ','')
 
     total_games = statistics_dict['total_wins'] + statistics_dict['total_losses']
@@ -25,9 +28,10 @@ def build_champion_report(statistics_dict, player_name):
     file_str = '\\documentclass[paper = letter, oneside]{extarticle}\n' \
                '\\usepackage[]{geometry}\n' \
                '\\usepackage{longtable}\n' \
-               '\n' \
-               '\\usepackage{array}' \
-               '\\newcolumntype{C}[1]{>{\\centering\\arraybackslash}p{#1}}' \
+               '\\usepackage[dvipsnames,table]{xcolor}\n' \
+               '\\definecolor{electricblue}{rgb}{0.49, 0.98, 1.0}\n' \
+               '\\usepackage{array}\n' \
+               '\\newcolumntype{C}[1]{>{\\centering\\arraybackslash}p{#1}}\n\n' \
                '\\begin{document}\n' \
                '\\begin{center}' \
                '\\LARGE\\textbf{Statistics for ' + player_name + '}\n\n' \
@@ -38,31 +42,46 @@ def build_champion_report(statistics_dict, player_name):
                '\\Large{Champion winrates}\n' \
                '\\bigskip\n\n' \
                '\\normalsize\n' \
-               '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n' \
-               'Champion Name & Winrate & Number of Games \\\\ \\hline\n'
+               '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n' \
+               'Champion Name & Winrate (\%) & Number of Games & Significance \\\\ \\hline\n'
 
     for item in statistics_dict['winrate_self']:
-        file_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '\\\\\n'
+        file_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '&'
+        for sig, color in significance_color:
+            if item[3] < sig:
+                file_str += '\\cellcolor{' + color + '}'
+                break
+        file_str += str(item[3])+ '\\\\\n'
 
     file_str += '\\end{longtable}\n' \
                 '\\Large{vs winrates}' \
                 '\\bigskip\n\n' \
                 '\\normalsize\n' \
-                '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n' \
-                'Champion Name & Winrate & Number of Games \\\\ \\hline\n'
+                '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n' \
+                'Champion Name & Winrate (\%)& Number of Games & Significance \\\\ \\hline\n'
 
     for item in statistics_dict['winrate_enemy']:
-        file_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '\\\\\n'
+        file_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '&'
+        for sig, color in significance_color:
+            if item[3] < sig:
+                file_str += '\\cellcolor{' + color + '}'
+                break
+        file_str += str(item[3])+ '\\\\\n'
 
     file_str += '\\end{longtable}\n' \
                 '\\Large{Synergy Winrates}' \
                 '\\bigskip\n\n' \
                 '\\normalsize\n' \
-                '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n' \
-                'Champion Name & Winrate & Number of Games \\\\ \\hline\n'
+                '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n' \
+                'Champion Name & Winrate (\%) & Number of Games & Significance \\\\ \\hline\n'
 
     for item in statistics_dict['winrate_team']:
-        file_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '\\\\\n'
+        file_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '&'
+        for sig, color in significance_color:
+            if item[3] < sig:
+                file_str += '\\cellcolor{' + color + '}'
+                break
+        file_str += str(item[3])+ '\\\\\n'
 
     file_str += '\\end{longtable}\n' \
                 '\\end{center}' \
