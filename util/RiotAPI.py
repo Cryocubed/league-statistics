@@ -14,6 +14,11 @@ class RiotAPI:
     api_key_index = 0
     keys_working = len(key_list)
 
+    # Rate limiting
+    rate_usage = {}
+    rate_max = {}
+    limit_time = 0
+
     def __init__(self):
         # Import API key
         api_key_file = open(API_KEY_FILE, 'r')
@@ -26,6 +31,31 @@ class RiotAPI:
     ##############################
     # Main API functions
     ##############################
+    def set_rate_limit_delay(self, headers):
+
+        if not self.rate_max:
+            self.rate_max = self.process_limit_headers(headers['X-App-Rate-Limit'])
+
+        self.rate_usage = self.process_limit_headers(headers['X-App-Rate-Limit-Count'])
+
+        new_limit_time = 0
+        for limit_key in self.rate_max.keys():
+            if self.rate_usage[limit_key] > 0.9 * self.rate_max[limit_key]:
+                new_limit_time = time.time() + self.rate_max[limit_key] + 1
+
+        if new_limit_time > self.limit_time:
+            self.limit_time = new_limit_time
+
+    @staticmethod
+    def process_limit_headers(datastr):
+        return_dict = {}
+
+        for rate_data in datastr.split(','):
+            split_data = rate_data.split(':')
+            return_dict[int(split_data[1])] = int(split_data[0])
+
+        return return_dict
+
     def make_request(self, api_link, region='na1', filters=str()):
 
         # Create API uri
@@ -53,6 +83,12 @@ class RiotAPI:
             # Contact API
             attempt_counter = 0  # Count web API access attempts
 
+            # Delay if rate limited
+            if time.time() < self.limit_time:
+                sleep_time = self.limit_time - time.time() + 1
+                print('Sleeping ' + str(sleep_time) + ' seconds due to rate limits')
+                time.sleep(sleep_time)
+
             response = None
             while True:
                 try:
@@ -61,6 +97,11 @@ class RiotAPI:
 
                     # Make request to riot api
                     r = requests.get(final_url + self.key_list[self.api_key_index % len(self.key_list)])
+
+                    # Update rate limiting
+                    self.set_rate_limit_delay(r.headers)
+
+                    # Read response
                     response = r.json()
                     if int(response['status']['status_code']) == 429:
                         self.api_key_index += 1
@@ -162,61 +203,6 @@ class RiotAPI:
         """
         return self.make_request('/lol/spectator/v3/active-games/by-summoner/' + str(self.get_summoner(name)['id']))
 
-    def get_match_champion_list(self, match_id, own_name):
-        """
-        Returns a dictionary containing data about the champions in a match of form:
-
-        same_team: list of champion ids on the team of the given player
-        enemy_team: list of champion ids not on the team of the given player
-        self: list containing only the champion the given player used
-        win_status: 'win' or 'fail'
-
-        :param match_id: Match id
-        :param own_name: Summoner name
-        :return: Dictionary as detailed above
-        """
-        # Gather data on the match and the player's team id
-        own_team_id, self_id = self.get_team_id(match_id, own_name)
-        match_data = self.get_match_by_id(match_id)
-
-        # Initialize the return dictionary
-        match_champion_list = {'team': [], 'enemy': [], 'self': [], 'length': match_data['gameDuration']}
-
-        # Determine if the player's team won
-        for team in match_data['teams']:
-            if team['teamId'] == own_team_id:
-                match_champion_list['win_status'] = team['win']
-
-        # Add champion ids to the dictionary one participant at a time
-        for participant in match_data['participants']:
-            if participant['teamId'] == own_team_id:
-                match_champion_list['team'].append(participant['championId'])
-
-                # Additionally add the champion id to self key if needed
-                if participant['participantId'] == self_id:
-                    match_champion_list['self'].append(participant['championId'])
-            else:
-                match_champion_list['enemy'].append(participant['championId'])
-
-        return match_champion_list
-
-    def get_team_id(self, match_id, own_name):
-        account_id = self.get_summoner(own_name)['accountId']
-        match_data = self.get_match_by_id(match_id)
-
-        participant_id = -1
-        for participant in match_data['participantIdentities']:
-            if account_id == participant['player']['accountId']:
-                participant_id = participant['participantId']
-                break
-
-        if participant_id != -1:
-            for participant in match_data['participants']:
-                if participant_id == participant['participantId']:
-                    return participant['teamId'], participant_id
-
-        return None
-
     def get_matches_by_filter(self, name, season=list(), begin_index=0, champion=list(), queue=list()):
 
         filter_str = 'beginIndex=' + str(begin_index)
@@ -237,6 +223,10 @@ class RiotAPI:
             match_list.append(match['gameId'])
 
         return match_list
+
+    def get_recent_matches(self, name):
+        return self.make_request('/lol/match/v3/matchlists/by-account/' + str(self.get_summoner(name)['accountId']) +
+                                 '/recent')
 
     # Class helper functions
     def shutdown(self):

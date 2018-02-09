@@ -1,0 +1,131 @@
+\documentclass[paper=letter, landscape, oneside]{report}
+\usepackage[]{geometry}
+\usepackage{longtable}
+\usepackage[dvipsnames,table]{xcolor}
+\definecolor{electricblue}{rgb}{0.49, 0.98, 1.0}
+\usepackage{array}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+\title{Comprehensive Performance Report for !PLAYERNAME!\\
+Seasons: !SEASONS!\\
+Queues: !QUEUES!
+}
+\author{Generated using software written by Joseph Baca}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\chapter*{Introduction}
+
+\paragraph{Summary}
+This report contains a variety of information about your performance.  It is structured into multiple parts, each designed to present you with a particular viewpoint. 
+
+\paragraph{Information Sources}
+All information in this document was gathered using the Riot API.
+
+\paragraph{Technology}
+The data gathering and statistical calculations were written in python. This document was automatically generated using \LaTeX.
+
+\paragraph{Disclaimer}
+This report is in no way meant to discourage you from any parts of the game. It is provided for informational purposes only, and I cannot guarantee that any information is correct.
+
+\chapter{Overview}
+
+This section contains the most important information for easy reference without having to dig through large data sets.
+
+\section{General Data}
+
+%League: Silver III (Anivia's Bloodmages) % TODO automate
+
+%Estimated ELO\footnote{Using op.gg}: !ELO! % TODO automate
+
+Overall winrate: !OVERALLWINRATE!\%
+
+\# of games: !OVERALLGAMES!
+
+Total days spent: !OVERALLTOTALDAYS!
+
+% TODO Include chart of elo vs time here?
+
+\section{Your best\dots}
+
+The following sections include information about what you are particularly good at. Note the statistical significance.
+
+\subsection{Champions}
+
+
+\subsection{Teammates}
+
+
+\subsection{Roles}
+
+\section{Your worst\dots}
+The following sections include information about what you aren't as good at. Note the statistical significance.
+
+\subsection{Champions}
+
+
+\subsection{Teammates}
+
+
+\subsection{Roles}
+
+\chapter{The Data}
+
+\section{When you play\dots}
+
+!SELFCHAMPSTATS!
+
+
+\section{When the enemy plays\dots}
+
+!ENEMYCHAMPSTATS!
+
+
+\section{When your teammates play\dots}
+
+!TEAMCHAMPSTATS!
+
+
+\section{Winrate by lane}
+
+!WINRATEBYLANE!
+
+
+\section{Player Synergy}
+
+!PLAYERSYNERGY!
+
+
+\section{Farming}
+
+\section{Objectives}
+
+\section{Gold}
+
+\chapter{Analysis}
+
+\section{Let's optimize solo-queue}
+\subsection{Who you should play (and where)}
+
+\subsection{Who you should ban}
+
+\section{Let's optimize your fives team}
+
+\subsection{Team composition}
+
+\subsection{Bans}
+
+\subsection{Strategy}
+
+
+\chapter{Reference}
+
+\section{Seasons}
+\paragraph{11} Season 2018
+\paragraph{10} Pre-season 2018
+
+\section{Queues}
+
+\end{document}

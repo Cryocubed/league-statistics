@@ -1,5 +1,6 @@
 import collections
 import math
+
 from scipy import stats as scistats
 
 
@@ -10,13 +11,17 @@ def compute_all_stats(api, name, season_list=list(), queue_list=list()):
     :param name: Player name
     :param season_list: A list of the seasons to parse. Empty uses all data.
     :param queue_list: A list of the queues to parse. Empty uses all data.
-    :return:
+    :return: Statistics dictionary
     """
 
     # Initialize variables
-    statistics = {'filters': {'Seasons': season_list, 'Queues': queue_list}, 'total_time': 0}
+    champion_stats = collections.defaultdict(lambda: collections.defaultdict(lambda: collections.defaultdict(int)))
+    statistics = {'filters': {'Seasons': season_list, 'Queues': queue_list}, 'champion_stats': {},
+                  'player_synergy': collections.defaultdict(lambda: collections.defaultdict(int)),
+                  'lane_winrate': collections.defaultdict(lambda: collections.defaultdict(int)),
+                  'total_time': 0, 'total_wins': 0}
 
-    # Get all matches given provided parameters
+    # <editor-fold desc="Get all matches given provided parameters">
     match_list = []
     curr_index = 0
     prev_len = -1
@@ -24,77 +29,139 @@ def compute_all_stats(api, name, season_list=list(), queue_list=list()):
         prev_len = len(match_list)
         match_list += api.get_matches_by_filter(name, begin_index=curr_index, season=season_list, queue=queue_list)
         curr_index += 100
-
-    # Print the number of matches to process
     print(str(len(match_list)), 'matches to process.')
+    # </editor-fold>
 
-    # Build list of all champion ids
-    champion_data = api.make_request('/lol/static-data/v3/champions')
-    champion_id_list = []
-    for champion in champion_data['data']:
-        champion_id_list.append(champion_data['data'][champion]['id'])
+    # <editor-fold desc="Iterate over all matches to collect data">
+    for match_id in match_list:
+        match_compiled_data = {}
+        match_data = api.get_match_by_id(match_id)
 
-    # Build champion stats dictionary
-    champion_stats = {'self': {}, 'team': {}, 'enemy': {}}
-    for champion in champion_id_list:
-        for team in champion_stats.keys():
-            champion_stats[team][champion] = {'win': 0, 'loss': 0}
+        # <editor-fold desc="Determine participant id and team id of player">
+        self_account_id = api.get_summoner(name)['accountId']
+        for participant in match_data['participantIdentities']:
+            if self_account_id == participant['player']['accountId']:
+                self_id = participant['participantId']
+                break
 
-    # Iterate over all matches to collect champ W/Ls
-    for match in match_list:
-        match_champion_list = api.get_match_champion_list(match, name)
+        for participant in match_data['participants']:
+            if self_id == participant['participantId']:
+                own_team_id = participant['teamId']
+                break
+        # </editor-fold>
 
-        statistics['total_time'] += match_champion_list['length']
+        # Determine if the player's team won
+        for team in match_data['teams']:
+            if team['teamId'] == own_team_id:
+                match_compiled_data['win_status'] = team['win']
 
-        # Update stats for all teams
-        for team in champion_stats.keys():
-            for champion in match_champion_list[team]:
-                if match_champion_list['win_status'] == 'Win':
-                    champion_stats[team][champion]['win'] += 1
+        # Determine game length
+        statistics['total_time'] += match_data['gameDuration']
+
+        # Iterate over each participant, collecting various data
+        for participant, participant_identity in zip(match_data['participants'], match_data['participantIdentities']):
+
+            # Collect player synergy data
+            if participant['teamId'] == own_team_id:
+                player_name = participant_identity['player']['summonerName']
+                statistics['player_synergy'][player_name][match_compiled_data['win_status']] += 1
+
+            # Determine role W/Ls
+            if participant['participantId'] == self_id:
+                role = participant['timeline']['role']
+                lane = participant['timeline']['lane']
+
+                if lane == 'BOTTOM':
+                    statistics['lane_winrate']['BOT_' + role][match_compiled_data['win_status']] += 1
                 else:
-                    champion_stats[team][champion]['loss'] += 1
+                    statistics['lane_winrate'][lane][match_compiled_data['win_status']] += 1
 
-    # Calculate overall winrate
-    wins_counter = 0
-    for champion in champion_stats['self'].keys():
-        wins_counter += champion_stats['self'][champion]['win']
+            # Count champion W/Ls
+            # Determine team
+            champion = participant['championId']
+            if participant['participantId'] == self_id:
+                team = 'self'
+            elif participant['teamId'] == own_team_id:
+                team = 'team'
+            else:
+                team = 'enemy'
 
-    statistics['total_wins'] = wins_counter
-    statistics['total_losses'] = len(match_list) - wins_counter
+            # Update champion stats, ensuring to update team in addition to self
+            if match_compiled_data['win_status'] == 'Win':
+                champion_stats[team][champion]['Win'] += 1
+                if team == 'self':
+                    champion_stats['team'][champion]['Win'] += 1
+                    statistics['total_wins'] += 1
+            else:
+                champion_stats[team][champion]['Fail'] += 1
+                if team == 'self':
+                    champion_stats['team'][champion]['Fail'] += 1
+    # </editor-fold>
 
-    # Compute champion winrates
+    # <editor-fold desc="Calculate player synergies">
+    for player_name, data in list(statistics['player_synergy'].items()):
+        # noinspection PyTypeChecker
+        if data['Win'] + data['Fail'] > 10:  # Needs more than 10 games together
+            # noinspection PyTypeChecker
+            data['ratio'] = data['Win'] / (data['Win'] + data['Fail'])
+        else:
+            del statistics['player_synergy'][player_name]
+    # </editor-fold>
+
+    # Calculate role winrates
+    for role in statistics['lane_winrate'].keys():
+        statistics['lane_winrate'][role]['ratio'] = statistics['lane_winrate'][role]['Win'] / \
+                                                    (statistics['lane_winrate'][role]['Win'] +
+                                                     statistics['lane_winrate'][role]['Fail'])
+
+    # Player synergy significance calculations
+    for player in statistics['player_synergy'].keys():
+        wins = statistics['player_synergy'][player]['Win']
+        losses = statistics['player_synergy'][player]['Fail']
+        statistics['player_synergy'][player]['significance'] = calculate_significance(wins, losses)
+
+    # Role significance calculations
+    for role in statistics['lane_winrate'].keys():
+        wins = statistics['lane_winrate'][role]['Win']
+        losses = statistics['lane_winrate'][role]['Fail']
+        statistics['lane_winrate'][role]['significance'] = calculate_significance(wins, losses)
+
+    # Calculate overall W/Ls
+    statistics['total_losses'] = len(match_list) - statistics['total_wins']
+
+    # <editor-fold desc="Compute champion winrates">
     for team in champion_stats.keys():
-        statistics['winrate_' + team] = compute_champ_winrates(api, champion_stats[team])
+        cstats = collections.defaultdict(dict)
+        for champion in champion_stats[team]:
+            try:
+                wins = champion_stats[team][champion]['Win']
+                losses = champion_stats[team][champion]['Fail']
+                total = wins + losses
+
+                cstats[api.get_champion_from_id(champion)]['winrate'] = round(100 * wins / total, 2)
+                cstats[api.get_champion_from_id(champion)]['games'] = total
+
+                # Calculate significance
+                cstats[api.get_champion_from_id(champion)]['significance'] = calculate_significance(wins, losses)
+
+            except ZeroDivisionError:
+                continue
+
+        statistics['champion_stats']['winrate_' + team] = []
+        for champion, data in cstats.items():
+            statistics['champion_stats']['winrate_' + team].append((champion, data['winrate'], data['games'],
+                                                                    data['significance']))
+
+        statistics['champion_stats']['winrate_' + team].sort(key=lambda tup: tup[1], reverse=True)
+    # </editor-fold>
 
     return statistics
 
 
-def compute_champ_winrates(api, champion_stats):
-    # Calculate self winrates and # of games played
-    stats = collections.defaultdict(dict)
-    for champion in champion_stats:
-        try:
-            wins = champion_stats[champion]['win']
-            losses = champion_stats[champion]['loss']
-            total = wins + losses
-
-            stats[api.get_champion_from_id(champion)]['winrate'] = round(100 * wins / total, 2)
-            stats[api.get_champion_from_id(champion)]['games'] = total
-
-            # Calculate significance
-            stdev = math.sqrt(total * math.pow(0.5, 2))
-            offset = abs(wins - total / 2)
-            if offset > 0:
-                offset -= 0.5
-            significance = round(2 * (1 - scistats.norm.cdf(offset / stdev)), 4)
-            stats[api.get_champion_from_id(champion)]['significance'] = significance
-
-        except ZeroDivisionError:
-            continue
-
-    formatted_list = []
-    for champion, data in stats.items():
-        formatted_list.append((champion, data['winrate'], data['games'], data['significance']))
-
-    formatted_list.sort(key=lambda tup: tup[1], reverse=True)
-    return formatted_list
+def calculate_significance(wins, losses):
+    total = wins + losses
+    stdev = math.sqrt(total * math.pow(0.5, 2))
+    offset = abs(wins - total / 2)
+    if offset > 0:
+        offset -= 0.5
+    return round(2 * (1 - scistats.norm.cdf(offset / stdev)), 4)

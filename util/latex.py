@@ -3,92 +3,153 @@ import os
 
 def build_latex_file(filename):
     os.system("pdflatex " + filename + '.tex')
-    os.remove(filename + '.aux')
-    os.remove(filename + '.log')
-    os.remove(filename + '.tex')
-    os.rename(filename + '.pdf', 'exports/' + filename + '.pdf')
+    os.system("pdflatex " + filename + '.tex')  # Twice for table of contents
+    try:
+        os.remove(filename + '.toc')
+        os.remove(filename + '.aux')
+        os.remove(filename + '.log')
+        if filename != 'report_template':
+            os.remove(filename + '.tex')
+        os.rename(filename + '.pdf', 'exports/' + filename + '.pdf')
+    except FileNotFoundError:
+        print('Tried to remove non existant file')
 
 
 def build_champion_report(statistics_dict, player_name):
+    player_name = player_name.replace(' ', '')
+
+    # Read template into memory
+    template_file = open('report_template.tex', 'r')
+    file_str = template_file.read()
+    template_file.close()
 
     # Config
     significance_color = [(0.01, 'electricblue'), (0.05, 'green'), (0.1, 'yellow'), (0.25, 'orange')]
 
-    player_name = player_name.replace(' ', '')
+    ######################################################
+    # Modify file string
 
+    # Player
+    file_str = file_str.replace('!PLAYERNAME!', player_name)
+
+    # Seasons
+    file_str = file_str.replace('!SEASONS!', str(statistics_dict['filters']['Seasons']))
+
+    # Queues
+    file_str = file_str.replace('!QUEUES!', str(statistics_dict['filters']['Queues']))
+
+    # ========
+    # Overview
+
+    # TODO League
+    # file_str = file_str.replace('!PLAYERNAME!', player_name)
+
+    # TODO ELO
+    # file_str = file_str.replace('!PLAYERNAME!', player_name)
+
+    # # Games
     total_games = statistics_dict['total_wins'] + statistics_dict['total_losses']
-    winrate = 100 * statistics_dict['total_wins'] / total_games
-    total_days_in_game = statistics_dict['total_time'] / 60 / 60 / 24
+    file_str = file_str.replace('!OVERALLGAMES!', str(total_games))
 
-    filter_str = ''
-    for curr_filter, curr_data in statistics_dict['filters'].items():
-        filter_str += str(curr_filter) + ': ' + str(curr_data) + '\n\n'
+    # Winrate
+    winrate = round(100 * statistics_dict['total_wins'] / total_games, 2)
+    file_str = file_str.replace('!OVERALLWINRATE!', str(winrate))
 
-    file_str = '\\documentclass[paper = letter, oneside]{extarticle}\n' \
-               '\\usepackage[]{geometry}\n' \
-               '\\usepackage{longtable}\n' \
-               '\\usepackage[dvipsnames,table]{xcolor}\n' \
-               '\\definecolor{electricblue}{rgb}{0.49, 0.98, 1.0}\n' \
-               '\\usepackage{array}\n' \
-               '\\newcolumntype{C}[1]{>{\\centering\\arraybackslash}p{#1}}\n\n' \
-               '\\begin{document}\n' \
-               '\\begin{center}' \
-               '\\LARGE\\textbf{Statistics for ' + player_name + '}\n\n' \
-               '\\large{' + filter_str + '}\n\n' \
-               '\\large{Overall winrate: ' + str(round(winrate, 2)) + '\%}\n\n' \
-               '\\large{\# of games: ' + str(total_games) + '}\n\n' \
-               '\\large{Total days spent: ' + str(round(total_days_in_game, 2)) + '}\n\n' \
-               '\\Large{Champion winrates}\n' \
-               '\\bigskip\n\n' \
-               '\\normalsize\n' \
-               '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n' \
-               'Champion Name & Winrate (\%) & Number of Games & Significance \\\\ \\hline\n'
+    # Days spent
+    total_days_in_game = round(statistics_dict['total_time'] / 60 / 60 / 24, 2)
+    file_str = file_str.replace('!OVERALLTOTALDAYS!', str(total_days_in_game))
 
-    for item in statistics_dict['winrate_self']:
-        file_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '&'
+    # =====================
+    # Self champ stats
+    champ_stats_str = ''
+    champ_stats_str += '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth} |' \
+                       ' C{.2\\textwidth}}\n' \
+                       'Champion Name & Winrate (\%) & Number of Games & Significance \\\\ \\hline\n'
+
+    for item in statistics_dict['champion_stats']['winrate_self']:
+        champ_stats_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '&'
         for sig, color in significance_color:
             if item[3] < sig:
-                file_str += '\\cellcolor{' + color + '}'
+                champ_stats_str += '\\cellcolor{' + color + '}'
                 break
-        file_str += str(item[3]) + '\\\\\n'
+        champ_stats_str += str(item[3]) + '\\\\\n'
 
-    file_str += '\\end{longtable}\n' \
-                '\\Large{vs winrates}' \
-                '\\bigskip\n\n' \
-                '\\normalsize\n' \
-                '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n' \
-                'Champion Name & Winrate (\%)& Number of Games & Significance \\\\ \\hline\n'
+    champ_stats_str += '\\end{longtable}'
+    file_str = file_str.replace('!SELFCHAMPSTATS!', champ_stats_str)
 
-    for item in statistics_dict['winrate_enemy']:
-        file_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '&'
+    # Enemy champ stats
+    champ_stats_str = ''
+    champ_stats_str += '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth} |' \
+                       ' C{.2\\textwidth}}\n' \
+                       'Champion Name & Winrate (\%) & Number of Games & Significance \\\\ \\hline\n'
+
+    for item in statistics_dict['champion_stats']['winrate_enemy']:
+        champ_stats_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '&'
         for sig, color in significance_color:
             if item[3] < sig:
-                file_str += '\\cellcolor{' + color + '}'
+                champ_stats_str += '\\cellcolor{' + color + '}'
                 break
-        file_str += str(item[3]) + '\\\\\n'
+        champ_stats_str += str(item[3]) + '\\\\\n'
 
-    file_str += '\\end{longtable}\n' \
-                '\\Large{Synergy Winrates}' \
-                '\\bigskip\n\n' \
-                '\\normalsize\n' \
-                '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n' \
-                'Champion Name & Winrate (\%) & Number of Games & Significance \\\\ \\hline\n'
+    champ_stats_str += '\\end{longtable}'
+    file_str = file_str.replace('!ENEMYCHAMPSTATS!', champ_stats_str)
 
-    for item in statistics_dict['winrate_team']:
-        file_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '&'
+    # Team champ stats
+    champ_stats_str = ''
+    champ_stats_str += '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth} |' \
+                       ' C{.2\\textwidth}}\n' \
+                       'Champion Name & Winrate (\%) & Number of Games & Significance \\\\ \\hline\n'
+
+    for item in statistics_dict['champion_stats']['winrate_team']:
+        champ_stats_str += str(item[0]) + '&' + str(item[1]) + '&' + str(item[2]) + '&'
         for sig, color in significance_color:
             if item[3] < sig:
-                file_str += '\\cellcolor{' + color + '}'
+                champ_stats_str += '\\cellcolor{' + color + '}'
                 break
-        file_str += str(item[3]) + '\\\\\n'
+        champ_stats_str += str(item[3]) + '\\\\\n'
 
-    file_str += '\\end{longtable}\n' \
-                '\\end{center}' \
-                '\\end{document}'
+    champ_stats_str += '\\end{longtable}'
+    file_str = file_str.replace('!TEAMCHAMPSTATS!', champ_stats_str)
+
+    # Winrate by lane
+    replacement_str = '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n'
+    replacement_str += 'Lane & Winrate (\%) & Number of Games & Significance \\\\ \\hline\n'
+
+    for lane, data in statistics_dict['lane_winrate'].items():
+        replacement_str += str(lane) + '&' + str(round(data['ratio'] * 100, 2)) + '&' + str(
+            data['Fail'] + data['Win']) + '&'
+        for sig, color in significance_color:
+            if data['significance'] < sig:
+                replacement_str += '\\cellcolor{' + color + '}'
+                break
+        replacement_str += str(data['significance']) + '\\\\\n'
+
+    replacement_str += '\\end{longtable}'
+    file_str = file_str.replace('!WINRATEBYLANE!', replacement_str)
+
+    # Winrate by player synergy
+    replacement_str = '\\begin{longtable}{ C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth} | C{.2\\textwidth}}\n'
+    replacement_str += 'Player & Winrate (\%) & Number of Games & Significance \\\\ \\hline\n'
+
+    for player, data in statistics_dict['player_synergy'].items():
+        replacement_str += str(player) + '&' + str(round(data['ratio'] * 100, 2)) + '&' + str(
+            data['Fail'] + data['Win']) + '&'
+        for sig, color in significance_color:
+            if data['significance'] < sig:
+                replacement_str += '\\cellcolor{' + color + '}'
+                break
+        replacement_str += str(data['significance']) + '\\\\\n'
+
+    replacement_str += '\\end{longtable}'
+    file_str = file_str.replace('!PLAYERSYNERGY!', replacement_str)
+
+    ######################################################
+    # Write template file to disk
+    file_str = file_str.replace('_', ' ')  # Fix latex error
+    player_report_filename = player_name + '_stats'
+    player_report = open(player_report_filename + '.tex', 'w')
+    player_report.write(file_str)
+    player_report.close()
 
     filename = player_name + '_stats'
-    f = open(filename + '.tex', "w")
-    f.write(file_str)
-    f.close()
-
     build_latex_file(filename)
